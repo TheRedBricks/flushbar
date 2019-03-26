@@ -384,7 +384,8 @@ class Flushbar<T extends Object> extends StatefulWidget {
       reverseAnimationCurve = Curves.fastOutSlowIn,
       animationDuration = const Duration(seconds: 1),
       onStatusChanged,
-      userInputForm})
+      userInputForm,
+      verticalPadding = 10.0})
       : this.title = title,
         this.message = message,
         this.titleText = titleText,
@@ -411,6 +412,7 @@ class Flushbar<T extends Object> extends StatefulWidget {
         this.reverseAnimationCurve = reverseAnimationCurve,
         this.animationDuration = animationDuration,
         this.userInputForm = userInputForm,
+        this.verticalPadding = verticalPadding
         super(key: key) {
     this.onStatusChanged = onStatusChanged ?? (status) {};
   }
@@ -529,7 +531,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
         "Don't forget to show a message to your user!");
 
     _isTitlePresent = (widget.title != null || widget.titleText != null);
-    _messageTopMargin = _isTitlePresent ? 6.0 : 16.0;
+    _messageTopMargin = _isTitlePresent ? 6.0 : verticalPadding;
 
     _setBoxShadow();
 
@@ -652,7 +654,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
       ),
       child: Padding(
         padding: const EdgeInsets.only(
-            left: 8.0, right: 8.0, bottom: 8.0, top: 16.0),
+            left: 8.0, right: 8.0, bottom: 8.0, top: verticalPadding),
         child: FocusScope(
           child: widget.userInputForm,
           node: focusNode,
@@ -707,7 +709,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
               (_isTitlePresent)
                   ? Padding(
                       padding: const EdgeInsets.only(
-                          top: 16.0, left: 16.0, right: 16.0),
+                          top: verticalPadding, left: 16.0, right: 16.0),
                       child: _getTitleText(),
                     )
                   : _emptyWidget,
@@ -716,7 +718,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
                     top: _messageTopMargin,
                     left: 16.0,
                     right: 16.0,
-                    bottom: 16.0),
+                    bottom: verticalPadding),
                 child: widget.messageText ?? _getDefaultNotificationText(),
               ),
             ],
@@ -739,7 +741,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
               (_isTitlePresent)
                   ? Padding(
                       padding: const EdgeInsets.only(
-                          top: 16.0, left: 4.0, right: 16.0),
+                          top: verticalPadding, left: 4.0, right: verticalPadding),
                       child: _getTitleText(),
                     )
                   : _emptyWidget,
@@ -748,7 +750,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
                     top: _messageTopMargin,
                     left: 4.0,
                     right: 16.0,
-                    bottom: 16.0),
+                    bottom: verticalPadding),
                 child: widget.messageText ?? _getDefaultNotificationText(),
               ),
             ],
@@ -767,7 +769,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
               (_isTitlePresent)
                   ? Padding(
                       padding: const EdgeInsets.only(
-                          top: 16.0, left: 16.0, right: 16.0),
+                          top: verticalPadding, left: 16.0, right: 16.0),
                       child: _getTitleText(),
                     )
                   : _emptyWidget,
@@ -776,7 +778,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
                     top: _messageTopMargin,
                     left: 16.0,
                     right: 8.0,
-                    bottom: 16.0),
+                    bottom: verticalPadding),
                 child: widget.messageText ?? _getDefaultNotificationText(),
               ),
             ],
@@ -802,7 +804,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
               (_isTitlePresent)
                   ? Padding(
                       padding: const EdgeInsets.only(
-                          top: 16.0, left: 4.0, right: 8.0),
+                          top: verticalPadding, left: 4.0, right: 8.0),
                       child: _getTitleText(),
                     )
                   : _emptyWidget,
@@ -811,7 +813,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
                     top: _messageTopMargin,
                     left: 4.0,
                     right: 8.0,
-                    bottom: 16.0),
+                    bottom: verticalPadding),
                 child: widget.messageText ?? _getDefaultNotificationText(),
               ),
             ],
