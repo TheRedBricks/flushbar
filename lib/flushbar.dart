@@ -356,36 +356,40 @@ typedef void FlushbarStatusCallback(FlushbarStatus status);
 /// [progressIndicatorBackgroundColor] a [LinearProgressIndicator] configuration parameter.
 /// [progressIndicatorValueColor] a [LinearProgressIndicator] configuration parameter.
 /// [userInputForm] A [TextFormField] in case you want a simple user input. Every other widget is ignored if this is not null.
+///
+/// Custom fields:
+/// [verticalPadding] Adds a custom vertical padding to Flushbar
 class Flushbar<T extends Object> extends StatefulWidget {
-  Flushbar(
-      {Key key,
-      title,
-      message,
-      titleText,
-      messageText,
-      icon,
-      aroundPadding = const EdgeInsets.all(0.0),
-      borderRadius = 0.0,
-      backgroundColor = const Color(0xFF303030),
-      leftBarIndicatorColor,
-      boxShadow,
-      backgroundGradient,
-      mainButton,
-      duration,
-      isDismissible = true,
-      dismissDirection = FlushbarDismissDirection.VERTICAL,
-      showProgressIndicator = false,
-      progressIndicatorController,
-      progressIndicatorBackgroundColor,
-      progressIndicatorValueColor,
-      flushbarPosition = FlushbarPosition.BOTTOM,
-      flushbarStyle = FlushbarStyle.FLOATING,
-      forwardAnimationCurve = Curves.easeOut,
-      reverseAnimationCurve = Curves.fastOutSlowIn,
-      animationDuration = const Duration(seconds: 1),
-      onStatusChanged,
-      userInputForm})
-      : this.title = title,
+  Flushbar({
+    Key key,
+    title,
+    message,
+    titleText,
+    messageText,
+    icon,
+    aroundPadding = const EdgeInsets.all(0.0),
+    borderRadius = 0.0,
+    backgroundColor = const Color(0xFF303030),
+    leftBarIndicatorColor,
+    boxShadow,
+    backgroundGradient,
+    mainButton,
+    duration,
+    isDismissible = true,
+    dismissDirection = FlushbarDismissDirection.VERTICAL,
+    showProgressIndicator = false,
+    progressIndicatorController,
+    progressIndicatorBackgroundColor,
+    progressIndicatorValueColor,
+    flushbarPosition = FlushbarPosition.BOTTOM,
+    flushbarStyle = FlushbarStyle.FLOATING,
+    forwardAnimationCurve = Curves.easeOut,
+    reverseAnimationCurve = Curves.fastOutSlowIn,
+    animationDuration = const Duration(seconds: 1),
+    onStatusChanged,
+    userInputForm,
+    verticalPadding = 10.0,
+  })  : this.title = title,
         this.message = message,
         this.titleText = titleText,
         this.messageText = messageText,
@@ -411,6 +415,7 @@ class Flushbar<T extends Object> extends StatefulWidget {
         this.reverseAnimationCurve = reverseAnimationCurve,
         this.animationDuration = animationDuration,
         this.userInputForm = userInputForm,
+        this.verticalPadding = verticalPadding,
         super(key: key) {
     this.onStatusChanged = onStatusChanged ?? (status) {};
   }
@@ -441,6 +446,7 @@ class Flushbar<T extends Object> extends StatefulWidget {
   final Curve forwardAnimationCurve;
   final Curve reverseAnimationCurve;
   final Duration animationDuration;
+  final double verticalPadding;
 
   _FlushbarRoute<T> _flushbarRoute;
   T _result;
@@ -529,7 +535,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
         "Don't forget to show a message to your user!");
 
     _isTitlePresent = (widget.title != null || widget.titleText != null);
-    _messageTopMargin = _isTitlePresent ? 6.0 : 16.0;
+    _messageTopMargin = _isTitlePresent ? 6.0 : widget.verticalPadding;
 
     _setBoxShadow();
 
@@ -716,7 +722,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
                     top: _messageTopMargin,
                     left: 16.0,
                     right: 16.0,
-                    bottom: 16.0),
+                    bottom: widget.verticalPadding),
                 child: widget.messageText ?? _getDefaultNotificationText(),
               ),
             ],
@@ -748,7 +754,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
                     top: _messageTopMargin,
                     left: 4.0,
                     right: 16.0,
-                    bottom: 16.0),
+                    bottom: widget.verticalPadding),
                 child: widget.messageText ?? _getDefaultNotificationText(),
               ),
             ],
@@ -776,7 +782,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
                     top: _messageTopMargin,
                     left: 16.0,
                     right: 8.0,
-                    bottom: 16.0),
+                    bottom: widget.verticalPadding),
                 child: widget.messageText ?? _getDefaultNotificationText(),
               ),
             ],
@@ -811,7 +817,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
                     top: _messageTopMargin,
                     left: 4.0,
                     right: 8.0,
-                    bottom: 16.0),
+                    bottom: widget.verticalPadding),
                 child: widget.messageText ?? _getDefaultNotificationText(),
               ),
             ],
