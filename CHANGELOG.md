@@ -1,4 +1,34 @@
-## [1.3.0] - 2019-05-14
+## [1.7.0] - 2019-05-06
+- add onTap property
+- fix exception caused by user dismissal while flushbar is appearing or hiding
+
+## [1.6.0] - 2019-31-05
+- **breaking change** this fixes `The method 'detach' isn't defined for the class 'FocusScopeNode'`
+- To use this version you will need Flutter 1.6, which in currently in the beta channel
+- If you need to use Flutter Stable channel, stay in version 1.5.3 (install it using `flushbar: '1.5.3'`) 
+while flutter 1.6 is in beta.
+- Package health score suffered a hit because it uses Flutter stable channel. It will go back to normal once 1.6 is released
+
+## [1.5.3] - 2019-27-05
+- update README file
+
+## [1.5.2] - 2019-26-05
+- `titleText` and `messageText` are now widgets so users can use `RichText` or `Text`
+- Add `shouldIconPulse` property
+
+## [1.5.0] - 2019-04-05
+- **Breaking Change** boxShadow is now called boxShadows and is a List<BoxShadow>
+
+## [1.4.0] - 2019-08-04
+- Add `overlayBlur` property that pushes an overlay blocking user input on the background. Only takes effect if greater then 0.0
+- Add `overlayColor` property that changes the overlay color. Default is transparent. Only takes effect if overlayBlur is greater then 0.0
+- Create new file for FlushbarRoute
+
+## [1.3.1] - 2019-02-04
+- Constructor now has strongly typed parameters (my bad for forgetting it)
+- Improved null message error
+
+## [1.3.0] - 2019-14-03
 - **Breaking Change** expect for `onStatusChanged`, all properties are now final. Two dot notation does 
 not work anymore. Since you can only use the instance one time, this
 is the best practice.

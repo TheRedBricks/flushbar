@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flushbar/flushbar.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,15 +20,18 @@ void main() {
     expect(flushbar.messageText, null);
     expect(flushbar.icon, null);
     expect(flushbar.leftBarIndicatorColor, null);
-    expect(flushbar.boxShadow, null);
+    expect(flushbar.boxShadows, null);
     expect(flushbar.backgroundGradient, null);
     expect(flushbar.mainButton, null);
+    expect(flushbar.onTap, null);
     expect(flushbar.isDismissible, true);
     expect(flushbar.dismissDirection, FlushbarDismissDirection.VERTICAL);
     expect(flushbar.showProgressIndicator, false);
     expect(flushbar.progressIndicatorController, null);
     expect(flushbar.progressIndicatorBackgroundColor, null);
     expect(flushbar.progressIndicatorValueColor, null);
+    expect(flushbar.overlayBlur, 0.0);
+    expect(flushbar.overlayColor, Colors.transparent);
     expect(flushbar.isShowing(), false);
     expect(flushbar.isDismissed(), false);
     expect(await flushbar.dismiss(), null);
