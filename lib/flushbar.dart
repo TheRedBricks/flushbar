@@ -1,406 +1,99 @@
 import 'package:flutter/material.dart';
 
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/scheduler.dart';
-
-class _FlushbarRoute<T> extends OverlayRoute<T> {
-  _FlushbarRoute({
-    @required this.theme,
-    @required this.flushbar,
-    RouteSettings settings,
-  }) : super(settings: settings) {
-    this._builder = Builder(builder: (BuildContext innerContext) {
-      return flushbar;
-    });
-
-    _configureAlignment(this.flushbar.flushbarPosition);
-
-    _onStatusChanged = flushbar.onStatusChanged;
-  }
-
-  _configureAlignment(FlushbarPosition flushbarPosition) {
-    switch (flushbar.flushbarPosition) {
-      case FlushbarPosition.TOP:
-        {
-          _initialAlignment = Alignment(-1.0, -2.0);
-          _endAlignment = Alignment(-1.0, -1.0);
-          break;
-        }
-      case FlushbarPosition.BOTTOM:
-        {
-          _initialAlignment = Alignment(-1.0, 2.0);
-          _endAlignment = Alignment(-1.0, 1.0);
-          break;
-        }
-    }
-  }
-
-  Flushbar flushbar;
-  Builder _builder;
-
-  final ThemeData theme;
-
-  Future<T> get completed => _transitionCompleter.future;
-  final Completer<T> _transitionCompleter = Completer<T>();
-
-  FlushbarStatusCallback _onStatusChanged;
-  Alignment _initialAlignment;
-  Alignment _endAlignment;
-  bool _wasDismissedBySwipe = false;
-
-  Timer _timer;
-
-  bool get opaque => false;
-
-  @override
-  Iterable<OverlayEntry> createOverlayEntries() {
-    return [
-      OverlayEntry(
-          builder: (BuildContext context) {
-            final Widget annotatedChild = Semantics(
-              child: AlignTransition(
-                alignment: _animation,
-                child: flushbar.isDismissible
-                    ? _getDismissibleFlushbar(_builder)
-                    : Padding(padding: flushbar.aroundPadding, child: _builder),
-              ),
-              focused: true,
-              scopesRoute: true,
-              explicitChildNodes: true,
-            );
-            return theme != null
-                ? Theme(data: theme, child: annotatedChild)
-                : annotatedChild;
-          },
-          maintainState: false,
-          opaque: opaque),
-    ];
-  }
-
-  /// This string is a workaround until Dismissible supports a returning item
-  String dismissibleKeyGen = "";
-
-  Widget _getDismissibleFlushbar(Widget child) {
-    return Dismissible(
-      direction: _getDismissDirection(),
-      resizeDuration: null,
-      key: Key(dismissibleKeyGen),
-      onDismissed: (_) {
-        dismissibleKeyGen += "1";
-        _cancelTimer();
-        _wasDismissedBySwipe = true;
-
-        if (isCurrent) {
-          navigator.pop();
-        } else {
-          navigator.removeRoute(this);
-        }
-      },
-      child: Padding(
-        padding: flushbar.aroundPadding,
-        child: child,
-      ),
-    );
-  }
-
-  DismissDirection _getDismissDirection() {
-    if (flushbar.dismissDirection == FlushbarDismissDirection.HORIZONTAL) {
-      return DismissDirection.horizontal;
-    } else {
-      if (flushbar.flushbarPosition == FlushbarPosition.TOP) {
-        return DismissDirection.up;
-      } else {
-        return DismissDirection.down;
-      }
-    }
-  }
-
-  @override
-  bool get finishedWhenPopped =>
-      _controller.status == AnimationStatus.dismissed;
-
-  /// The animation that drives the route's transition and the previous route's
-  /// forward transition.
-  Animation<Alignment> get animation => _animation;
-  Animation<Alignment> _animation;
-
-  /// The animation controller that the route uses to drive the transitions.
-  ///
-  /// The animation itself is exposed by the [animation] property.
-  @protected
-  AnimationController get controller => _controller;
-  AnimationController _controller;
-
-  /// Called to create the animation controller that will drive the transitions to
-  /// this route from the previous one, and back to the previous route from this
-  /// one.
-  AnimationController createAnimationController() {
-    assert(!_transitionCompleter.isCompleted,
-        'Cannot reuse a $runtimeType after disposing it.');
-    assert(flushbar.animationDuration != null &&
-        flushbar.animationDuration >= Duration.zero);
-    return AnimationController(
-      duration: flushbar.animationDuration,
-      debugLabel: debugLabel,
-      vsync: navigator,
-    );
-  }
-
-  /// Called to create the animation that exposes the current progress of
-  /// the transition controlled by the animation controller created by
-  /// [createAnimationController()].
-  Animation<Alignment> createAnimation() {
-    assert(!_transitionCompleter.isCompleted,
-        'Cannot reuse a $runtimeType after disposing it.');
-    assert(_controller != null);
-    return AlignmentTween(begin: _initialAlignment, end: _endAlignment).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: flushbar.forwardAnimationCurve,
-        reverseCurve: flushbar.reverseAnimationCurve,
-      ),
-    );
-  }
-
-  T _result;
-  FlushbarStatus currentStatus;
-
-  //copy of `routes.dart`
-  void _handleStatusChanged(AnimationStatus status) {
-    switch (status) {
-      case AnimationStatus.completed:
-        currentStatus = FlushbarStatus.SHOWING;
-        _onStatusChanged(currentStatus);
-        if (overlayEntries.isNotEmpty) overlayEntries.first.opaque = opaque;
-
-        break;
-      case AnimationStatus.forward:
-        currentStatus = FlushbarStatus.IS_APPEARING;
-        _onStatusChanged(currentStatus);
-        break;
-      case AnimationStatus.reverse:
-        currentStatus = FlushbarStatus.IS_HIDING;
-        _onStatusChanged(currentStatus);
-        if (overlayEntries.isNotEmpty) overlayEntries.first.opaque = false;
-        break;
-      case AnimationStatus.dismissed:
-        assert(!overlayEntries.first.opaque);
-        // We might still be the current route if a subclass is controlling the
-        // the transition and hits the dismissed status. For example, the iOS
-        // back gesture drives this animation to the dismissed status before
-        // popping the navigator.
-        currentStatus = FlushbarStatus.DISMISSED;
-        _onStatusChanged(currentStatus);
-
-        if (!isCurrent) {
-          navigator.finalizeRoute(this);
-          assert(overlayEntries.isEmpty);
-        }
-        break;
-    }
-    changedInternalState();
-  }
-
-  @override
-  void install(OverlayEntry insertionPoint) {
-    assert(!_transitionCompleter.isCompleted,
-        'Cannot install a $runtimeType after disposing it.');
-    _controller = createAnimationController();
-    assert(_controller != null,
-        '$runtimeType.createAnimationController() returned null.');
-    _animation = createAnimation();
-    assert(_animation != null, '$runtimeType.createAnimation() returned null.');
-    super.install(insertionPoint);
-  }
-
-  @override
-  TickerFuture didPush() {
-    assert(_controller != null,
-        '$runtimeType.didPush called before calling install() or after calling dispose().');
-    assert(!_transitionCompleter.isCompleted,
-        'Cannot reuse a $runtimeType after disposing it.');
-    _animation.addStatusListener(_handleStatusChanged);
-    _configureTimer();
-    return _controller.forward();
-  }
-
-  @override
-  void didReplace(Route<dynamic> oldRoute) {
-    assert(_controller != null,
-        '$runtimeType.didReplace called before calling install() or after calling dispose().');
-    assert(!_transitionCompleter.isCompleted,
-        'Cannot reuse a $runtimeType after disposing it.');
-    if (oldRoute is _FlushbarRoute)
-      _controller.value = oldRoute._controller.value;
-    _animation.addStatusListener(_handleStatusChanged);
-    super.didReplace(oldRoute);
-  }
-
-  @override
-  bool didPop(T result) {
-    assert(_controller != null,
-        '$runtimeType.didPop called before calling install() or after calling dispose().');
-    assert(!_transitionCompleter.isCompleted,
-        'Cannot reuse a $runtimeType after disposing it.');
-
-    _result = result;
-    _cancelTimer();
-
-    if (_wasDismissedBySwipe) {
-      Timer(Duration(milliseconds: 200), () {
-        _controller.reset();
-      });
-
-      _wasDismissedBySwipe = false;
-    } else {
-      _controller.reverse();
-    }
-
-    return super.didPop(result);
-  }
-
-  void _configureTimer() {
-    if (flushbar.duration != null) {
-      if (_timer != null && _timer.isActive) {
-        _timer.cancel();
-      }
-      _timer = Timer(flushbar.duration, () {
-        if (this.isCurrent) {
-          navigator.pop();
-        } else if (this.isActive) {
-          navigator.removeRoute(this);
-        }
-      });
-    } else {
-      if (_timer != null) {
-        _timer.cancel();
-      }
-    }
-  }
-
-  void _cancelTimer() {
-    if (_timer != null && _timer.isActive) {
-      _timer.cancel();
-    }
-  }
-
-  /// Whether this route can perform a transition to the given route.
-  ///
-  /// Subclasses can override this method to restrict the set of routes they
-  /// need to coordinate transitions with.
-  bool canTransitionTo(_FlushbarRoute<dynamic> nextRoute) => true;
-
-  /// Whether this route can perform a transition from the given route.
-  ///
-  /// Subclasses can override this method to restrict the set of routes they
-  /// need to coordinate transitions with.
-  bool canTransitionFrom(_FlushbarRoute<dynamic> previousRoute) => true;
-
-  @override
-  void dispose() {
-    assert(!_transitionCompleter.isCompleted,
-        'Cannot dispose a $runtimeType twice.');
-    _controller?.dispose();
-    _transitionCompleter.complete(_result);
-    super.dispose();
-  }
-
-  /// A short description of this route useful for debugging.
-  String get debugLabel => '$runtimeType';
-
-  @override
-  String toString() => '$runtimeType(animation: $_controller)';
-}
-
-_FlushbarRoute _showFlushbar<T>(
-    {@required BuildContext context, @required Flushbar flushbar}) {
-  assert(flushbar != null);
-
-  return _FlushbarRoute<T>(
-    flushbar: flushbar,
-    theme: Theme.of(context),
-    settings: RouteSettings(name: FLUSHBAR_ROUTE_NAME),
-  );
-}
+import 'flushbar_route.dart' as route;
 
 const String FLUSHBAR_ROUTE_NAME = "/flushbarRoute";
 
 typedef void FlushbarStatusCallback(FlushbarStatus status);
 
-/// A custom widget so you can notify your user when you fell like he needs an explanation.
-/// This is inspired on a custom view (Flashbar)[https://github.com/aritraroy/Flashbar] created for android.
+/// A highly customizable widget so you can notify your user when you fell like he needs a beautiful explanation.
 ///
 /// [title] The title displayed to the user
 /// [message] The message displayed to the user.
-/// [titleText] If you need something more personalized, pass a [Text] widget to this variable. [title] will be ignored if this variable is not null.
-/// [messageText] If you need something more personalized, pass a [Text] widget to this variable. [message] will be ignored if this variable is not null.
+/// [titleText] Replaces [title]. Although this accepts a [Widget], it is meant to receive [Text] or [RichText]
+/// [messageText] Replaces [message]. Although this accepts a [Widget], it is meant to receive [Text] or  [RichText]
 /// [icon] You can use any widget here, but I recommend [Icon] or [Image] as indication of what kind of message you are displaying. Other widgets may break the layout
+/// [shouldIconPulse] An option to animate the icon (if present). Defaults to true.
 /// [aroundPadding] Adds a custom padding to Flushbar
 /// [borderRadius] Adds a radius to all corners of Flushbar. Best combined with [aroundPadding]. I do not recommend using it with [showProgressIndicator] or [leftBarIndicatorColor]
 /// [backgroundColor] Flushbar background color. Will be ignored if [backgroundGradient] is not null.
 /// [leftBarIndicatorColor] If not null, shows a left vertical bar to better indicate the humor of the notification. It is not possible to use it with a [Form] and I do not recommend using it with [LinearProgressIndicator].
-/// [boxShadow] The shadow generated by the Flushbar. Leave it null if you don't want a shadow.
+/// [boxShadows] The shadows generated by Flushbar. Leave it null if you don't want a shadow. You can use more than one if you feel the need. Check (this example)[https://github.com/flutter/flutter/blob/master/packages/flutter/lib/src/material/shadows.dart]
 /// [backgroundGradient] Flushbar background gradient. Makes [backgroundColor] be ignored.
 /// [mainButton] A [FlatButton] widget if you need an action from the user.
+/// [onTap] A callback that registers the user's click anywhere. An alternative to [mainButton]
 /// [duration] How long until Flushbar will hide itself (be dismissed). To make it indefinite, leave it null.
 /// [isDismissible] Determines if the user can swipe to dismiss the bar. It is recommended that you set [duration] != null if [isDismissible] == false. If the user swipes Flushbar to dismiss it no value will be returned.
 /// [dismissDirection] FlushbarDismissDirection.VERTICAL by default. Can also be [FlushbarDismissDirection.HORIZONTAL] in which case both left and right dismiss are allowed.
 /// [flushbarPosition] Flushbar can be based on [FlushbarPosition.TOP] or on [FlushbarPosition.BOTTOM] of your screen. [FlushbarPosition.BOTTOM] is the default.
-/// [flushbarStyle] Flushbar can be floating or be grounded to the edge of the screen. If grounded, I do not recomment unsing [aroundPadding] or [borderRadius]. [FlushbarStyle.FLOATING] is the default
+/// [flushbarStyle] Flushbar can be floating or be grounded to the edge of the screen. If grounded, I do not recommend using [aroundPadding] or [borderRadius]. [FlushbarStyle.FLOATING] is the default
 /// [forwardAnimationCurve] The [Curve] animation used when show() is called. [Curves.easeOut] is default.
 /// [reverseAnimationCurve] The [Curve] animation used when dismiss() is called. [Curves.fastOutSlowIn] is default.
 /// [animationDuration] Use it to speed up or slow down the animation duration
 /// [showProgressIndicator] true if you want to show a [LinearProgressIndicator].
-/// [progressIndicatorController] An optional [AnimationController] when you want to controll the progress of your [LinearProgressIndicator].
+/// [progressIndicatorController] An optional [AnimationController] when you want to control the progress of your [LinearProgressIndicator].
 /// [progressIndicatorBackgroundColor] a [LinearProgressIndicator] configuration parameter.
 /// [progressIndicatorValueColor] a [LinearProgressIndicator] configuration parameter.
+/// [overlayBlur] Default is 0.0. If different than 0.0, creates a blurred overlay that prevents the user from interacting with the screen. The greater the value, the greater the blur.
+/// [overlayColor] Default is [Colors.transparent]. Only takes effect if [overlayBlur] > 0.0. Make sure you use a color with transparency here e.g. Colors.grey[600].withOpacity(0.2).
 /// [userInputForm] A [TextFormField] in case you want a simple user input. Every other widget is ignored if this is not null.
+/// [onStatusChanged] a callback for you to listen to the different Flushbar status
 ///
 /// Custom fields:
 /// [verticalPadding] Adds a custom vertical padding to Flushbar
 class Flushbar<T extends Object> extends StatefulWidget {
   Flushbar({
     Key key,
-    title,
-    message,
-    titleText,
-    messageText,
-    icon,
-    aroundPadding = const EdgeInsets.all(0.0),
-    borderRadius = 0.0,
-    backgroundColor = const Color(0xFF303030),
-    leftBarIndicatorColor,
-    boxShadow,
-    backgroundGradient,
-    mainButton,
-    duration,
-    isDismissible = true,
-    dismissDirection = FlushbarDismissDirection.VERTICAL,
-    showProgressIndicator = false,
-    progressIndicatorController,
-    progressIndicatorBackgroundColor,
-    progressIndicatorValueColor,
-    flushbarPosition = FlushbarPosition.BOTTOM,
-    flushbarStyle = FlushbarStyle.FLOATING,
-    forwardAnimationCurve = Curves.easeOut,
-    reverseAnimationCurve = Curves.fastOutSlowIn,
-    animationDuration = const Duration(seconds: 1),
-    onStatusChanged,
-    userInputForm,
+    String title,
+    String message,
+    Widget titleText,
+    Widget messageText,
+    Widget icon,
+    bool shouldIconPulse = true,
+    EdgeInsets aroundPadding = const EdgeInsets.all(0.0),
+    double borderRadius = 0.0,
+    Color backgroundColor = const Color(0xFF303030),
+    Color leftBarIndicatorColor,
+    List<BoxShadow> boxShadows,
+    Gradient backgroundGradient,
+    FlatButton mainButton,
+    Function onTap(Flushbar flushbar),
+    Duration duration,
+    bool isDismissible = true,
+    FlushbarDismissDirection dismissDirection =
+        FlushbarDismissDirection.VERTICAL,
+    bool showProgressIndicator = false,
+    AnimationController progressIndicatorController,
+    Color progressIndicatorBackgroundColor,
+    Animation<Color> progressIndicatorValueColor,
+    FlushbarPosition flushbarPosition = FlushbarPosition.BOTTOM,
+    FlushbarStyle flushbarStyle = FlushbarStyle.FLOATING,
+    Curve forwardAnimationCurve = Curves.easeOut,
+    Curve reverseAnimationCurve = Curves.fastOutSlowIn,
+    Duration animationDuration = const Duration(seconds: 1),
+    FlushbarStatusCallback onStatusChanged,
+    double overlayBlur = 0.0,
+    Color overlayColor = Colors.transparent,
+    Form userInputForm,
     verticalPadding = 10.0,
   })  : this.title = title,
         this.message = message,
         this.titleText = titleText,
         this.messageText = messageText,
         this.icon = icon,
+        this.shouldIconPulse = shouldIconPulse,
         this.aroundPadding = aroundPadding,
         this.borderRadius = borderRadius,
         this.backgroundColor = backgroundColor,
         this.leftBarIndicatorColor = leftBarIndicatorColor,
-        this.boxShadow = boxShadow,
+        this.boxShadows = boxShadows,
         this.backgroundGradient = backgroundGradient,
         this.mainButton = mainButton,
+        this.onTap = onTap,
         this.duration = duration,
         this.isDismissible = isDismissible,
         this.dismissDirection = dismissDirection,
@@ -414,6 +107,8 @@ class Flushbar<T extends Object> extends StatefulWidget {
         this.forwardAnimationCurve = forwardAnimationCurve,
         this.reverseAnimationCurve = reverseAnimationCurve,
         this.animationDuration = animationDuration,
+        this.overlayBlur = overlayBlur,
+        this.overlayColor = overlayColor,
         this.userInputForm = userInputForm,
         this.verticalPadding = verticalPadding,
         super(key: key) {
@@ -423,14 +118,16 @@ class Flushbar<T extends Object> extends StatefulWidget {
   FlushbarStatusCallback onStatusChanged;
   final String title;
   final String message;
-  final Text titleText;
-  final Text messageText;
+  final Widget titleText;
+  final Widget messageText;
   final Color backgroundColor;
   final Color leftBarIndicatorColor;
-  final BoxShadow boxShadow;
+  final List<BoxShadow> boxShadows;
   final Gradient backgroundGradient;
   final Widget icon;
+  final bool shouldIconPulse;
   final FlatButton mainButton;
+  final Function(Flushbar) onTap;
   final Duration duration;
   final bool showProgressIndicator;
   final AnimationController progressIndicatorController;
@@ -447,13 +144,14 @@ class Flushbar<T extends Object> extends StatefulWidget {
   final Curve reverseAnimationCurve;
   final Duration animationDuration;
   final double verticalPadding;
+  final double overlayBlur;
+  final Color overlayColor;
 
-  _FlushbarRoute<T> _flushbarRoute;
-  T _result;
+  route.FlushbarRoute<T> _flushbarRoute;
 
   /// Show the flushbar. Kicks in [FlushbarStatus.IS_APPEARING] state followed by [FlushbarStatus.SHOWING]
   Future<T> show(BuildContext context) async {
-    _flushbarRoute = _showFlushbar<T>(
+    _flushbarRoute = route.showFlushbar<T>(
       context: context,
       flushbar: this,
     );
@@ -501,9 +199,7 @@ class Flushbar<T extends Object> extends StatefulWidget {
 
 class _FlushbarState<K extends Object> extends State<Flushbar>
     with TickerProviderStateMixin {
-  BoxShadow _boxShadow;
   FlushbarStatus currentStatus;
-  Timer _timer;
 
   AnimationController _fadeController;
   Animation<double> _fadeAnimation;
@@ -514,16 +210,11 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
 
   final Duration _pulseAnimationDuration = Duration(seconds: 1);
 
-  List<BoxShadow> _getBoxShadowList() {
-    if (_boxShadow != null) {
-      return [_boxShadow];
-    } else {
-      return null;
-    }
-  }
-
   bool _isTitlePresent;
   double _messageTopMargin;
+
+  FocusScopeNode _focusNode;
+  FocusAttachment _focusAttachment;
 
   @override
   void initState() {
@@ -531,21 +222,23 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
 
     assert(
         ((widget.userInputForm != null ||
-            (widget.message != null || widget.messageText != null))),
-        "Don't forget to show a message to your user!");
+            ((widget.message != null && widget.message.isNotEmpty) ||
+                widget.messageText != null))),
+        "A message is mandatory if you are not using userInputForm. Set either a message or messageText");
 
     _isTitlePresent = (widget.title != null || widget.titleText != null);
     _messageTopMargin = _isTitlePresent ? 6.0 : widget.verticalPadding;
 
-    _setBoxShadow();
-
     _configureLeftBarFuture();
     _configureProgressIndicatorAnimation();
 
-    if (widget.icon != null) {
+    if (widget.icon != null && widget.shouldIconPulse) {
       _configurePulseAnimation();
       _fadeController?.forward();
     }
+
+    _focusNode = FocusScopeNode();
+    _focusAttachment = _focusNode.attach(context);
   }
 
   @override
@@ -555,14 +248,9 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
     widget.progressIndicatorController?.removeListener(_progressListener);
     widget.progressIndicatorController?.dispose();
 
-    focusNode.detach();
+    _focusAttachment.detach();
+    _focusNode.dispose();
     super.dispose();
-  }
-
-  void _setBoxShadow() {
-    if (widget.boxShadow != null) {
-      _boxShadow = widget.boxShadow;
-    }
   }
 
   final Completer<double> _boxHeightCompleter = Completer<double>();
@@ -646,14 +334,12 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
         : _generateFlushbar();
   }
 
-  FocusScopeNode focusNode = FocusScopeNode();
-
   Widget _generateInputFlushbar() {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: widget.backgroundColor,
         gradient: widget.backgroundGradient,
-        boxShadow: _getBoxShadowList(),
+        boxShadow: widget.boxShadows,
         borderRadius: BorderRadius.circular(widget.borderRadius),
       ),
       child: Padding(
@@ -661,7 +347,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
             left: 8.0, right: 8.0, bottom: 8.0, top: 16.0),
         child: FocusScope(
           child: widget.userInputForm,
-          node: focusNode,
+          node: _focusNode,
           autofocus: true,
         ),
       ),
@@ -677,7 +363,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
       decoration: BoxDecoration(
         color: widget.backgroundColor,
         gradient: widget.backgroundGradient,
-        boxShadow: _getBoxShadowList(),
+        boxShadow: widget.boxShadows,
         borderRadius: BorderRadius.circular(widget.borderRadius),
       ),
       child: Column(
@@ -854,7 +540,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
   }
 
   Widget _getIcon() {
-    if (widget.icon != null && widget.icon is Icon) {
+    if (widget.icon != null && widget.icon is Icon && widget.shouldIconPulse) {
       return FadeTransition(
         opacity: _fadeAnimation,
         child: widget.icon,
@@ -866,7 +552,7 @@ class _FlushbarState<K extends Object> extends State<Flushbar>
     }
   }
 
-  Text _getTitleText() {
+  Widget _getTitleText() {
     return widget.titleText != null
         ? widget.titleText
         : Text(
